@@ -34,16 +34,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = localTime.hours() * 60 + localTime.minutes();
         
         // Update all timezones
-        updateTimes(minutes, 0);
+        updateTimes(localTime.toDate());
     });
 
     // Handle slider changes
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('time-slider')) {
             const minutes = parseInt(e.target.value);
+            
+            // Get the timezone of the moved slider
             const timezoneItem = e.target.closest('.timezone-item');
-            const index = Array.from(document.querySelectorAll('.timezone-item')).indexOf(timezoneItem);
-            updateTimes(minutes, index);
+            const cityName = timezoneItem.querySelector('h2').textContent;
+            const timeZone = allTimezones.find(tz => tz.city === cityName)?.timezone;
+            
+            if (timeZone) {
+                // Create a moment object in the source timezone
+                const sliderDate = moment().tz(timeZone)
+                    .year(datePicker.valueAsDate.getFullYear())
+                    .month(datePicker.valueAsDate.getMonth())
+                    .date(datePicker.valueAsDate.getDate())
+                    .hour(Math.floor(minutes / 60))
+                    .minute(minutes % 60);
+                
+                // Convert to UTC for consistent updates
+                const utcDate = sliderDate.utc().toDate();
+                updateTimes(utcDate);
+            }
         }
     });
 
@@ -56,13 +72,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const position = (e.clientX - rect.left) / rect.width;
             const minutes = Math.round(position * 1439);
             
-            // Update slider value
-            slider.value = minutes;
-            
-            // Find the timezone index and update times
+            // Get the timezone of the clicked timeline
             const timezoneItem = timelineContainer.closest('.timezone-item');
-            const index = Array.from(document.querySelectorAll('.timezone-item')).indexOf(timezoneItem);
-            updateTimes(minutes, index);
+            const cityName = timezoneItem.querySelector('h2').textContent;
+            const timeZone = allTimezones.find(tz => tz.city === cityName)?.timezone;
+            
+            if (timeZone) {
+                // Create a moment object in the clicked timezone
+                const clickedDate = moment().tz(timeZone)
+                    .year(datePicker.valueAsDate.getFullYear())
+                    .month(datePicker.valueAsDate.getMonth())
+                    .date(datePicker.valueAsDate.getDate())
+                    .hour(Math.floor(minutes / 60))
+                    .minute(minutes % 60);
+                
+                // Convert to UTC for consistent updates
+                const utcDate = clickedDate.utc().toDate();
+                updateTimes(utcDate);
+            }
         }
     });
 
@@ -201,44 +228,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle date changes
     datePicker.addEventListener('change', () => {
         const minutes = parseInt(timeSliders[0].value);
-        updateTimes(minutes, 0);
+        updateTimes(new Date(datePicker.valueAsDate.getFullYear(), datePicker.valueAsDate.getMonth(), datePicker.valueAsDate.getDate(), Math.floor(minutes / 60), minutes % 60));
     });
 
-    function updateTimes(minutes, sourceIndex) {
-        // 使用日期选择器的值，并确保它在上海时区
-        const date = moment.tz(datePicker.value, 'Asia/Shanghai');
-        const timezoneItems = document.querySelectorAll('.timezone-item');
-        const sourceTimezone = getTimezoneFromIndex(sourceIndex);
-        
-        // Create source time using moment.js
-        const sourceTime = date.clone()
-            .hours(Math.floor(minutes / 60))
-            .minutes(minutes % 60);
-        
-        timezoneItems.forEach((item, index) => {
-            const targetTimezone = getTimezoneFromIndex(index);
-            const targetTime = sourceTime.clone().tz(targetTimezone);
+    function updateTimes(utcDate) {
+        const items = document.querySelectorAll('.timezone-item');
+        items.forEach(item => {
+            const cityName = item.querySelector('h2').textContent;
+            const timeZone = allTimezones.find(tz => tz.city === cityName)?.timezone;
             
-            // Update displayed time
-            const timeStr = targetTime.format('h:mm A');
-            const zoneStr = targetTime.format('z');
-            const dateStr = targetTime.format('ddd, MMM D');
-            
-            item.querySelector('.current-time').textContent = timeStr;
-            item.querySelector('.timezone-label').textContent = zoneStr;
-            item.querySelector('.date-label').textContent = dateStr;
-            
-            // Update slider position
-            const targetMinutes = targetTime.hours() * 60 + targetTime.minutes();
-            const slider = item.querySelector('.time-slider');
-            slider.value = targetMinutes;
-            
-            // Update time marker
-            const marker = item.querySelector('.current-time-marker');
-            marker.textContent = timeStr;
-            marker.style.left = `${(targetMinutes / 1439) * 100}%`;
+            if (timeZone) {
+                // Convert UTC date to local timezone
+                const localTime = moment(utcDate).tz(timeZone);
+                const totalMinutes = localTime.hours() * 60 + localTime.minutes();
+                const timeStr = localTime.format('h:mm A');
+                
+                // Update time display
+                item.querySelector('.current-time').textContent = timeStr;
+                item.querySelector('.timezone-label').textContent = localTime.format('z');
+                item.querySelector('.date-label').textContent = localTime.format('ddd, MMM D');
+                
+                // Update slider position
+                const slider = item.querySelector('.time-slider');
+                slider.value = totalMinutes;
+                
+                // Update time marker position and text
+                const marker = item.querySelector('.current-time-marker');
+                marker.textContent = timeStr;
+                marker.style.left = `${(totalMinutes / 1439) * 100}%`;
+            }
         });
         
+        // Update timeline backgrounds
         updateTimelineBackgrounds();
     }
 
@@ -307,13 +328,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeWithCurrentTime() {
-        // 使用北京时间初始化
         const now = moment().tz('Asia/Shanghai');
-        datePicker.value = formatDate(now.toDate());
-        
-        // 使用北京时间的小时和分钟
-        const minutes = now.hours() * 60 + now.minutes();
-        updateTimes(minutes, 0);
+        datePicker.valueAsDate = now.toDate();
+        updateTimes(now.toDate());
     }
 
     // Add timezone functionality
@@ -371,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentMinutes = parseInt(firstSlider.value);
 
         // Update all times based on the current time
-        updateTimes(currentMinutes, 0);
+        updateTimes(new Date(datePicker.valueAsDate.getFullYear(), datePicker.valueAsDate.getMonth(), datePicker.valueAsDate.getDate(), Math.floor(currentMinutes / 60), currentMinutes % 60));
     }
 
     // Initialize remove buttons for existing timezones

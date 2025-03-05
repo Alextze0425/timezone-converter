@@ -205,12 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateTimes(minutes, sourceIndex) {
-        const date = moment().tz('Asia/Shanghai').startOf('day').toDate();  // 使用北京时间的日期
+        // 使用日期选择器的值，并确保它在上海时区
+        const date = moment.tz(datePicker.value, 'Asia/Shanghai');
         const timezoneItems = document.querySelectorAll('.timezone-item');
         const sourceTimezone = getTimezoneFromIndex(sourceIndex);
         
         // Create source time using moment.js
-        const sourceTime = moment.tz(date, sourceTimezone)
+        const sourceTime = date.clone()
             .hours(Math.floor(minutes / 60))
             .minutes(minutes % 60);
         

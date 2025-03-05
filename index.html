@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Zone Converter</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="search-container">
+                <input type="text" placeholder="Add Time Zone, City or Town" class="search-input">
+                <button class="add-button">+</button>
+            </div>
+            <div class="controls">
+                <input type="date" class="date-picker" id="datePicker">
+                <div class="button-group">
+                    <button class="icon-button current-time-button" title="Current Time">
+                        <i class="icon">⏰</i>
+                        <span class="current-time-tooltip"></span>
+                    </button>
+                    <button class="icon-button share-button" title="Share"><i class="icon">🔗</i></button>
+                    <button class="icon-button" title="Theme"><i class="icon">🌙</i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="timezone-list">
+            <div class="timezone-item">
+                <div class="timezone-info">
+                    <div class="timezone-header">
+                        <h2>Beijing</h2>
+                        <button class="remove-button" title="Remove">×</button>
+                    </div>
+                    <div class="location-info">China</div>
+                    <div class="time-info">
+                        <span class="current-time">10:30 am</span>
+                        <span class="timezone-label">CST</span>
+                        <span class="date-label">Tue, Oct 15</span>
+                    </div>
+                </div>
+                <div class="timeline-container">
+                    <div class="timeline">
+                        <div class="time-marker" data-time="12am">12am</div>
+                        <div class="time-marker" data-time="3am">3am</div>
+                        <div class="time-marker" data-time="6am">6am</div>
+                        <div class="time-marker" data-time="9am">9am</div>
+                        <div class="time-marker" data-time="12pm">12pm</div>
+                        <div class="time-marker" data-time="3pm">3pm</div>
+                        <div class="time-marker" data-time="6pm">6pm</div>
+                        <div class="time-marker" data-time="9pm">9pm</div>
+                    </div>
+                    <div class="timeline-slider">
+                        <input type="range" min="0" max="1439" value="720" class="time-slider">
+                        <div class="current-time-marker"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timezone-item">
+                <div class="timezone-info">
+                    <div class="timezone-header">
+                        <h2>New York</h2>
+                        <button class="remove-button" title="Remove">×</button>
+                    </div>
+                    <div class="location-info">United States</div>
+                    <div class="time-info">
+                        <span class="current-time">7:30 pm</span>
+                        <span class="timezone-label">EDT</span>
+                        <span class="date-label">Mon, Oct 14</span>
+                    </div>
+                </div>
+                <div class="timeline-container">
+                    <div class="timeline">
+                        <div class="time-marker" data-time="12am">12am</div>
+                        <div class="time-marker" data-time="3am">3am</div>
+                        <div class="time-marker" data-time="6am">6am</div>
+                        <div class="time-marker" data-time="9am">9am</div>
+                        <div class="time-marker" data-time="12pm">12pm</div>
+                        <div class="time-marker" data-time="3pm">3pm</div>
+                        <div class="time-marker" data-time="6pm">6pm</div>
+                        <div class="time-marker" data-time="9pm">9pm</div>
+                    </div>
+                    <div class="timeline-slider">
+                        <input type="range" min="0" max="1439" value="720" class="time-slider">
+                        <div class="current-time-marker"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timezone-item">
+                <div class="timezone-info">
+                    <div class="timezone-header">
+                        <h2>London</h2>
+                        <button class="remove-button" title="Remove">×</button>
+                    </div>
+                    <div class="location-info">United Kingdom</div>
+                    <div class="time-info">
+                        <span class="current-time">3:30 am</span>
+                        <span class="timezone-label">BST</span>
+                        <span class="date-label">Tue, Oct 15</span>
+                    </div>
+                </div>
+                <div class="timeline-container">
+                    <div class="timeline">
+                        <div class="time-marker" data-time="12am">12am</div>
+                        <div class="time-marker" data-time="3am">3am</div>
+                        <div class="time-marker" data-time="6am">6am</div>
+                        <div class="time-marker" data-time="9am">9am</div>
+                        <div class="time-marker" data-time="12pm">12pm</div>
+                        <div class="time-marker" data-time="3pm">3pm</div>
+                        <div class="time-marker" data-time="6pm">6pm</div>
+                        <div class="time-marker" data-time="9pm">9pm</div>
+                    </div>
+                    <div class="timeline-slider">
+                        <input type="range" min="0" max="1439" value="720" class="time-slider">
+                        <div class="current-time-marker"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -17,9 +17,10 @@
     --night-color: #2c3e50;
     --day-color: #3498db;
     --tooltip-bg: rgba(44, 62, 80, 0.95);
+    --background-color: white;
 }
 
-.dark-mode {
+[data-theme="dark"] {
     --bg-color: #1a1a1a;
     --card-bg: #2c3e50;
     --text-color: #ecf0f1;
@@ -28,9 +29,10 @@
     --primary-color: #3498db;
     --primary-dark: #2980b9;
     --timeline-bg: #34495e;
-    --night-color: #2c3e50;
-    --day-color: #3498db;
-    --tooltip-bg: rgba(236, 240, 241, 0.95);
+    --night-color: #3498db;
+    --day-color: #2c3e50;
+    --tooltip-bg: rgba(52, 152, 219, 0.95);
+    --background-color: #2c3e50;
 }
 
 body {
@@ -38,7 +40,7 @@ body {
     min-height: 100vh;
     padding: 20px;
     color: var(--text-color);
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
@@ -134,8 +136,9 @@ body {
 
 .controls {
     display: flex;
-    gap: 16px;
+    gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .date-picker {
@@ -304,11 +307,7 @@ h2 {
     height: 6px;
     -webkit-appearance: none;
     appearance: none;
-    background: linear-gradient(to right, 
-        var(--night-color) 0%, var(--night-color) 20%,
-        var(--day-color) 20%, var(--day-color) 80%,
-        var(--night-color) 80%, var(--night-color) 100%
-    );
+    background: var(--primary-color);
     border-radius: 3px;
     outline: none;
 }
@@ -353,6 +352,69 @@ h2 {
     border-top-color: var(--primary-color);
 }
 
+.hour-selector {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-size: 14px;
+    margin: 0 10px;
+    cursor: pointer;
+    outline: none;
+}
+
+.hour-selector:hover {
+    border-color: var(--primary-color);
+}
+
+.hour-selector:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+[data-theme="dark"] .hour-selector {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.timezone-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.timezone-controls .date-picker,
+.timezone-controls .hour-selector {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    cursor: pointer;
+    outline: none;
+}
+
+.timezone-controls .date-picker:hover,
+.timezone-controls .hour-selector:hover {
+    border-color: var(--primary-color);
+}
+
+.timezone-controls .date-picker:focus,
+.timezone-controls .hour-selector:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+[data-theme="dark"] .timezone-controls .date-picker,
+[data-theme="dark"] .timezone-controls .hour-selector {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
 @media (max-width: 768px) {
     .header {
         flex-direction: column;
@@ -370,4 +432,51 @@ h2 {
     .time-marker {
         font-size: 0.8rem;
     }
+    
+    .hour-selector {
+        width: auto;
+        min-width: 100px;
+    }
+    
+    .timezone-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .timezone-controls .date-picker,
+    .timezone-controls .hour-selector {
+        width: 100%;
+    }
+}
+
+[data-theme="dark"] .timezone-item {
+    background-color: var(--card-bg);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .search-input {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .search-input:focus {
+    border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .time-slider {
+    background: var(--primary-color);
+}
+
+[data-theme="dark"] .time-slider::-webkit-slider-thumb {
+    background: var(--text-color);
+}
+
+[data-theme="dark"] .current-time-marker {
+    background-color: var(--tooltip-bg);
+    color: white;
 } 

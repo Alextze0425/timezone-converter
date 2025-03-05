@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateTimes(minutes, sourceIndex) {
-        const date = new Date(datePicker.value);
+        const date = moment().tz('Asia/Shanghai').startOf('day').toDate();  // 使用北京时间的日期
         const timezoneItems = document.querySelectorAll('.timezone-item');
         const sourceTimezone = getTimezoneFromIndex(sourceIndex);
         
@@ -286,7 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function formatDate(date) {
-        return date.toISOString().split('T')[0];
+        // 使用上海时区格式化日期
+        return moment(date).tz('Asia/Shanghai').format('YYYY-MM-DD');
     }
     
     function formatDateLabel(date) {
@@ -305,13 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeWithCurrentTime() {
-        const now = moment();
+        // 使用北京时间初始化
+        const now = moment().tz('Asia/Shanghai');
         datePicker.value = formatDate(now.toDate());
         
-        // Get current time in first timezone (Beijing)
-        const timezone = getTimezoneFromIndex(0);
-        const localTime = now.tz(timezone);
-        const minutes = localTime.hours() * 60 + localTime.minutes();
+        // 使用北京时间的小时和分钟
+        const minutes = now.hours() * 60 + now.minutes();
         updateTimes(minutes, 0);
     }
 

@@ -13,9 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('===== 应用初始化开始 =====');
     
-    // 全局变量，用于控制保存动作 
-    let isLoadingFromStorage = true; // 初始化时设为true，防止自动保存
-    
     // 使用更直观的存储键名
     const STORAGE_KEY = 'savedTimezoneCities';
     
@@ -48,12 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 初始化拖放功能
         initDragAndDrop();
         console.log('已初始化拖放排序功能');
-        
-        // 初始化完成后，允许自动保存
-        setTimeout(() => {
-            isLoadingFromStorage = false;
-            console.log('初始化完成，现在可以自动保存设置');
-        }, 1000);
     }
     
     // 保存按钮点击处理
@@ -123,12 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('保存时区设置...');
         
         try {
-            // (防止在初始加载时触发保存)
-            if (isLoadingFromStorage) {
-                console.log('正在从存储加载，跳过保存');
-                return true;
-            }
-            
             // 获取所有时区项
             const timezoneItems = document.querySelectorAll('.timezone-item');
             if (timezoneItems.length === 0) {
@@ -245,16 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update time marker
             updateTimeMarker(item, localTime);
         });
-
-        // 每次更新后自动保存时区设置（静默保存，不显示通知）
-        // 但只在不是加载过程中时进行保存
-        if (!isLoadingFromStorage) {
-            try {
-                saveTimezonesToLocalStorage(false);
-            } catch (e) {
-                console.error('自动保存设置失败:', e);
-            }
-        }
     }
 
     function updateTimeMarker(item, time) {
@@ -373,13 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeZoneItem = e.target.closest('.timezone-item');
             if (timeZoneItem && timeZoneList.children.length > 1) {
                 timeZoneItem.remove();
-                // 删除地区后自动保存设置（静默保存，不显示通知）
-                try {
-                    saveTimezonesToLocalStorage(false);
-                } catch (e) {
-                    // 静默处理错误
-                    console.error('删除时区后自动保存失败:', e);
-                }
+                // 显示未保存提示
+                showUnsavedChangesNotification();
             }
         }
     });
@@ -515,19 +485,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 绑定拖拽事件
         setupDragAndDrop(newTimezoneItem);
         
-        // 仅当不是在加载过程中时更新时区并保存
-        if (!isLoading && !isLoadingFromStorage) {
+        // 仅当不是在加载过程中时更新时区（移除保存部分）
+        if (!isLoading) {
             updateAllTimeZones(now.toDate());
-            
-            // 添加时区后自动保存设置（静默保存，不显示通知）
-            try {
-                // 延迟保存，确保DOM已完全更新
-                setTimeout(() => {
-                    saveTimezonesToLocalStorage(false);
-                }, 100);
-            } catch (e) {
-                console.error('添加时区后自动保存失败:', e);
-            }
         }
         
         return newTimezoneItem;
@@ -535,121 +495,142 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 设置拖放排序功能
     function setupDragAndDrop(timezoneItem) {
-        timezoneItem.addEventListener('dragstart', handleDragStart);
-        timezoneItem.addEventListener('dragend', handleDragEnd);
-        timezoneItem.addEventListener('dragover', handleDragOver);
-        timezoneItem.addEventListener('dragenter', handleDragEnter);
-        timezoneItem.addEventListener('dragleave', handleDragLeave);
-        timezoneItem.addEventListener('drop', handleDrop);
+        // 默认禁用拖动
+        timezoneItem.setAttribute('draggable', 'false');
         
         // 为拖动手柄添加事件
         const dragHandle = timezoneItem.querySelector('.drag-handle');
         if (dragHandle) {
-            dragHandle.addEventListener('mousedown', () => {
+            // 为拖动手柄添加鼠标按下事件
+            dragHandle.addEventListener('mousedown', (e) => {
+                console.log('拖动手柄被按下');
+                // 设置父元素为可拖动
                 timezoneItem.setAttribute('draggable', 'true');
-            });
-            
-            dragHandle.addEventListener('mouseup', () => {
-                timezoneItem.setAttribute('draggable', 'false');
+                timezoneItem.style.cursor = 'grabbing';
+                dragHandle.style.cursor = 'grabbing';
             });
         }
+        
+        // 为时区项添加拖拽事件
+        timezoneItem.addEventListener('dragstart', (e) => {
+            console.log('开始拖动时区项');
+            draggedItem = timezoneItem;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', timezoneItem.innerHTML);
+            timezoneItem.classList.add('dragging');
+            
+            // 添加拖动中的指示样式到所有时区项
+            const items = document.querySelectorAll('.timezone-item');
+            items.forEach(item => {
+                if (item !== draggedItem) {
+                    item.classList.add('droppable');
+                }
+            });
+        });
+        
+        // 完成拖放后禁用拖动并显示未保存提示
+        timezoneItem.addEventListener('dragend', (e) => {
+            console.log('拖动结束');
+            timezoneItem.classList.remove('dragging');
+            
+            // 移除所有时区项的拖动指示样式
+            const items = document.querySelectorAll('.timezone-item');
+            items.forEach(item => {
+                item.setAttribute('draggable', 'false');
+                item.classList.remove('droppable');
+                item.classList.remove('drag-over');
+                item.style.cursor = '';
+                
+                const handle = item.querySelector('.drag-handle');
+                if (handle) {
+                    handle.style.cursor = 'grab';
+                }
+            });
+            
+            draggedItem = null;
+            
+            // 显示未保存提示
+            showUnsavedChangesNotification();
+        });
+        
+        // 拖动经过另一个时区项
+        timezoneItem.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        });
+        
+        // 拖动进入另一个时区项
+        timezoneItem.addEventListener('dragenter', function() {
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        });
+        
+        // 拖动离开时区项
+        timezoneItem.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        
+        // 放置时区项
+        timezoneItem.addEventListener('drop', function(e) {
+            e.stopPropagation();
+            
+            // 只在不同元素间处理放置
+            if (draggedItem && this !== draggedItem) {
+                console.log('放置时区项');
+                // 获取当前时区项的位置信息
+                const targetRect = this.getBoundingClientRect();
+                const targetMiddleY = targetRect.top + targetRect.height / 2;
+                
+                // 根据放置位置（上半部分或下半部分）决定插入位置
+                if (e.clientY < targetMiddleY) {
+                    // 放在目标之前
+                    timezoneList.insertBefore(draggedItem, this);
+                } else {
+                    // 放在目标之后
+                    timezoneList.insertBefore(draggedItem, this.nextSibling);
+                }
+            }
+            
+            this.classList.remove('drag-over');
+            return false;
+        });
+        
+        // 为文档添加鼠标抬起事件，确保释放时禁用拖动
+        document.addEventListener('mouseup', () => {
+            timezoneItem.setAttribute('draggable', 'false');
+            timezoneItem.style.cursor = '';
+            if (dragHandle) {
+                dragHandle.style.cursor = 'grab';
+            }
+        });
     }
     
     // 当前被拖动的元素
     let draggedItem = null;
     
-    // 拖动开始事件处理
-    function handleDragStart(e) {
-        draggedItem = this;
-        // 设置拖动数据和效果
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', this.innerHTML);
-        // 添加拖动中的样式
-        this.classList.add('dragging');
-        
-        // 添加拖动中的指示样式到所有时区项
-        const items = document.querySelectorAll('.timezone-item');
-        items.forEach(item => {
-            if (item !== draggedItem) {
-                item.classList.add('droppable');
-            }
-        });
-    }
-    
-    // 拖动结束事件处理
-    function handleDragEnd() {
-        this.classList.remove('dragging');
-        
-        // 移除所有时区项的拖动指示样式
-        const items = document.querySelectorAll('.timezone-item');
-        items.forEach(item => {
-            item.classList.remove('droppable');
-            item.classList.remove('drag-over');
-        });
-        
-        // 在拖动完成后保存新的顺序
-        if (!isLoadingFromStorage) {
-            saveTimezonesToLocalStorage(false);
-        }
-        
-        draggedItem = null;
-    }
-    
-    // 拖动经过元素事件处理
-    function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault(); // 允许放置
-        }
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-    
-    // 拖动进入元素事件处理
-    function handleDragEnter() {
-        if (this !== draggedItem) {
-            this.classList.add('drag-over');
-        }
-    }
-    
-    // 拖动离开元素事件处理
-    function handleDragLeave() {
-        this.classList.remove('drag-over');
-    }
-    
-    // 放置事件处理
-    function handleDrop(e) {
-        if (e.stopPropagation) {
-            e.stopPropagation(); // 阻止浏览器默认处理
-        }
-        
-        // 只在不同元素间处理放置
-        if (draggedItem && this !== draggedItem) {
-            // 获取当前时区项的位置信息
-            const targetRect = this.getBoundingClientRect();
-            const targetMiddleY = targetRect.top + targetRect.height / 2;
-            
-            // 根据放置位置（上半部分或下半部分）决定插入位置
-            if (e.clientY < targetMiddleY) {
-                // 放在目标之前
-                timezoneList.insertBefore(draggedItem, this);
-            } else {
-                // 放在目标之后
-                timezoneList.insertBefore(draggedItem, this.nextSibling);
-            }
-            
-            // 清除拖放指示样式
-            this.classList.remove('drag-over');
-        }
-        
-        return false;
-    }
-    
     // 初始化已存在的时区项的拖放功能
     function initDragAndDrop() {
+        console.log('开始初始化拖放功能');
         const existingItems = document.querySelectorAll('.timezone-item');
-        existingItems.forEach(item => {
+        console.log(`找到 ${existingItems.length} 个时区项`);
+        
+        existingItems.forEach((item, index) => {
+            console.log(`设置第 ${index+1} 个时区项的拖放功能`);
             setupDragAndDrop(item);
+            
+            // 检查并确保拖动手柄样式正确
+            const dragHandle = item.querySelector('.drag-handle');
+            if (dragHandle) {
+                dragHandle.style.cursor = 'grab';
+                console.log('已设置拖动手柄的鼠标样式为手掌形状');
+            } else {
+                console.warn('未找到拖动手柄元素');
+            }
         });
+        
+        console.log('拖放功能初始化完成');
     }
     
     // 显示保存成功的提示
@@ -670,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <div style="font-weight: bold;">设置已保存</div>
                     <div style="font-size: 12px;">您的时区设置已成功保存到本地存储</div>
+                    <div style="font-size: 11px; margin-top: 5px;">提示：下次打开页面前请记得保存更改！</div>
                 </div>
             </div>
         `;
@@ -686,6 +668,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.style.backgroundColor = originalBg;
                 }, 1000);
             });
+            
+            // 保存按钮动画效果
+            if (saveButton) {
+                const originalBg = saveButton.style.backgroundColor;
+                const originalColor = saveButton.style.color;
+                
+                saveButton.style.backgroundColor = 'var(--accent-color)';
+                saveButton.style.color = 'white';
+                saveButton.style.transform = 'scale(1.1)';
+                saveButton.textContent = '✓ 已保存';
+                
+                setTimeout(() => {
+                    saveButton.style.backgroundColor = originalBg;
+                    saveButton.style.color = originalColor;
+                    saveButton.style.transform = 'scale(1)';
+                    saveButton.textContent = '保存设置';
+                }, 2000);
+            }
         }, 10);
         
         // 5秒后隐藏通知（增加显示时间）
@@ -738,6 +738,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 addTimezone(result.dataset.timezone);
                 hideSearchResults();
                 searchInput.value = '';
+                // 显示未保存提示
+                showUnsavedChangesNotification();
             });
         });
     }
@@ -775,16 +777,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // 页面关闭或刷新前再次保存设置
+    // 移除页面关闭或刷新前的自动保存
     window.addEventListener('beforeunload', (event) => {
-        try {
-            // 静默保存，不显示通知
-            saveTimezonesToLocalStorage(false);
-        } catch (e) {
-            console.error('页面关闭前保存设置失败:', e);
-        }
+        // 不再自动保存设置
     });
     
     // 可以在控制台使用此函数重置应用
     window.clearAllSettings = clearAllSettings;
+
+    // 显示未保存提示
+    function showUnsavedChangesNotification() {
+        // 检查是否已存在通知元素
+        let notification = document.querySelector('.unsaved-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'unsaved-notification';
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.backgroundColor = 'rgba(255, 152, 0, 0.9)';
+            notification.style.color = 'white';
+            notification.style.padding = '10px 15px';
+            notification.style.borderRadius = '5px';
+            notification.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+            notification.style.zIndex = '1000';
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s ease';
+            document.body.appendChild(notification);
+        }
+        
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 18px; margin-right: 8px;">⚠️</span>
+                <div>
+                    <div style="font-weight: bold;">未保存的更改</div>
+                    <div style="font-size: 12px;">您有未保存的更改</div>
+                    <div style="font-size: 11px; margin-top: 5px;">点击"保存设置"按钮以保存您的设置</div>
+                </div>
+            </div>
+        `;
+        
+        // 显示通知
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            
+            // 高亮保存按钮
+            if (saveButton) {
+                saveButton.style.animation = 'pulse 1.5s infinite';
+            }
+        }, 10);
+        
+        // 5秒后隐藏通知
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            
+            // 停止保存按钮动画
+            if (saveButton) {
+                saveButton.style.animation = '';
+            }
+        }, 5000);
+    }
 });

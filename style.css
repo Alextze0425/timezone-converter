@@ -8,7 +8,7 @@
     opacity: 0.6;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    cursor: grabbing;
+    cursor: grabbing !important;
 }
 
 .timezone-item.droppable {
@@ -21,19 +21,72 @@
     background-color: rgba(var(--accent-rgb), 0.05);
 }
 
+/* 拖动手柄样式强化 */
 .drag-handle {
-    cursor: grab;
+    cursor: grab !important; /* 强制使用grab光标 */
     font-size: 18px;
     margin-right: 10px;
     color: var(--text-color-light);
-    opacity: 0.6;
+    opacity: 0.7;
     user-select: none;
     vertical-align: middle;
+    padding: 4px 8px; /* 增加可点击区域 */
+    border-radius: 4px; /* 圆角边框 */
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .drag-handle:hover {
     opacity: 1;
     color: var(--accent-color);
+    background-color: rgba(var(--accent-rgb), 0.15); /* 增强悬停时背景色变化 */
+    cursor: grab !important;
+    transform: scale(1.1); /* 轻微放大效果 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加轻微阴影 */
+}
+
+.drag-handle:active,
+.timezone-item.dragging .drag-handle {
+    cursor: grabbing !important; /* 按下时为grabbing样式 */
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* 添加提示效果 */
+.drag-handle::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 6px;
+    background: transparent;
+    border: 2px dashed transparent;
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.drag-handle:hover::before {
+    border-color: var(--accent-color);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 拖动时状态 */
+.timezone-item[draggable="true"] .drag-handle {
+    cursor: grabbing !important;
+    color: var(--accent-color);
+}
+
+.timezone-item[draggable="true"] {
+    cursor: grabbing !important;
+    z-index: 1000;
 }
 
 .header-controls {
@@ -77,4 +130,13 @@
 
 .remove-button {
     margin-left: auto;
+}
+
+/* 保存按钮高亮效果 */
+.save-button {
+    transition: all 0.3s ease;
+}
+
+.save-button:hover {
+    transform: scale(1.05);
 } 

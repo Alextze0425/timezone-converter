@@ -18,6 +18,7 @@
     --day-color: #3498db;
     --tooltip-bg: rgba(44, 62, 80, 0.95);
     --background-color: white;
+    --success-color: #4CAF50;
 }
 
 [data-theme="dark"] {
@@ -478,5 +479,25 @@ h2 {
 
 [data-theme="dark"] .current-time-marker {
     background-color: var(--tooltip-bg);
+    color: white;
+}
+
+/* 保存通知样式 */
+.save-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 15px;
+    background-color: var(--success-color);
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .save-notification {
+    background-color: var(--success-color);
     color: white;
 } 

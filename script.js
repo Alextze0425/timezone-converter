@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTimeTooltip = document.querySelector('.current-time-tooltip');
     const timezoneList = document.querySelector('.timezone-list');
     const hourSelector = document.getElementById('hourSelector');
+    const saveButton = document.querySelector('.save-button');
     
     // Theme toggle functionality
     let isDarkTheme = localStorage.getItem('darkTheme') === 'true' || 
@@ -60,13 +61,43 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     // 保存当前时区设置到本地存储
-    function saveTimezonesToLocalStorage() {
+    function saveTimezonesToLocalStorage(showNotification = false) {
         const timezones = Array.from(document.querySelectorAll('.timezone-item')).map(item => {
             const cityName = item.querySelector('h2').textContent;
             return getTimezoneFromCity(cityName);
         });
         
         localStorage.setItem('savedTimezones', JSON.stringify(timezones));
+        console.log('已保存时区设置:', timezones); // 添加日志便于调试
+        
+        // 仅在手动保存时显示提示
+        if (showNotification) {
+            showSaveNotification();
+        }
+    }
+    
+    // 显示保存成功的提示
+    function showSaveNotification() {
+        // 检查是否已存在通知元素
+        let notification = document.querySelector('.save-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'save-notification';
+            document.body.appendChild(notification);
+        }
+        
+        notification.textContent = '时区设置已保存！';
+        
+        // 显示通知
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 10);
+        
+        // 3秒后隐藏通知
+        setTimeout(() => {
+            notification.style.opacity = '0';
+        }, 3000);
     }
 
     function updateAllTimeZones(baseDate, sourceTimezone = null) {
@@ -102,8 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTimeMarker(item, localTime);
         });
 
-        // 每次更新后保存时区设置
-        saveTimezonesToLocalStorage();
+        // 每次更新后自动保存时区设置（静默保存，不显示通知）
+        saveTimezonesToLocalStorage(false);
     }
 
     function updateTimeMarker(item, time) {
@@ -222,8 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeZoneItem = e.target.closest('.timezone-item');
             if (timeZoneItem && timeZoneList.children.length > 1) {
                 timeZoneItem.remove();
-                // 删除地区后保存设置
-                saveTimezonesToLocalStorage();
+                // 删除地区后自动保存设置（静默保存，不显示通知）
+                saveTimezonesToLocalStorage(false);
             }
         }
     });
@@ -350,8 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
         timezoneList.prepend(newTimezoneItem);
         updateAllTimeZones(now.toDate());
         
-        // 添加时区后保存设置
-        saveTimezonesToLocalStorage();
+        // 添加时区后自动保存设置（静默保存，不显示通知）
+        saveTimezonesToLocalStorage(false);
     }
     
     // 从本地存储加载时区设置
@@ -361,19 +392,35 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 从localStorage获取保存的时区
         const savedTimezones = localStorage.getItem('savedTimezones');
+        console.log('从localStorage读取到的数据:', savedTimezones); // 添加日志
         
-        if (savedTimezones) {
-            // 如果有保存的时区，则加载它们
-            const timezones = JSON.parse(savedTimezones);
-            timezones.forEach(timezone => {
-                addTimezone(timezone);
-            });
-        } else {
-            // 如果没有保存的时区，则加载默认时区
-            ['Asia/Shanghai', 'America/New_York', 'Europe/London'].forEach(timezone => {
-                addTimezone(timezone);
-            });
+        if (savedTimezones && savedTimezones !== "null" && savedTimezones !== "undefined") {
+            try {
+                // 如果有保存的时区，则加载它们（保持用户的自定义顺序）
+                const timezones = JSON.parse(savedTimezones);
+                console.log('解析后的时区数据:', timezones); // 添加日志
+                
+                if (Array.isArray(timezones) && timezones.length > 0) {
+                    // 我们需要倒序添加，因为prepend会把每个新项放在最前面
+                    // 所以我们要从数组的最后一个元素开始添加
+                    for (let i = timezones.length - 1; i >= 0; i--) {
+                        if (timezones[i]) {
+                            addTimezone(timezones[i]);
+                        }
+                    }
+                    return; // 成功加载保存的设置，提前返回
+                }
+            } catch (error) {
+                console.error('加载保存的时区设置出错:', error);
+            }
         }
+        
+        console.log('加载默认设置'); // 添加日志
+        // 如果没有保存的时区设置或解析出错，则加载默认设置
+        // 先添加伦敦，然后纽约，最后添加北京（由于prepend，北京会显示在最前面）
+        addTimezone('Europe/London');
+        addTimezone('America/New_York');
+        addTimezone('Asia/Shanghai'); // 北京将显示在最前面
     }
     
     // 初始化时加载时区设置
@@ -432,5 +479,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resultsContainer) {
             resultsContainer.remove();
         }
+    }
+
+    // 给保存按钮添加事件监听器
+    if (saveButton) {
+        saveButton.addEventListener('click', () => {
+            // 手动点击保存按钮，显示通知
+            saveTimezonesToLocalStorage(true);
+        });
     }
 });

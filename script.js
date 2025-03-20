@@ -59,6 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
         !tz.includes('Pacific/') && !tz.includes('Indian/') && !tz.includes('Antarctica/')
     );
 
+    // 保存当前时区设置到本地存储
+    function saveTimezonesToLocalStorage() {
+        const timezones = Array.from(document.querySelectorAll('.timezone-item')).map(item => {
+            const cityName = item.querySelector('h2').textContent;
+            return getTimezoneFromCity(cityName);
+        });
+        
+        localStorage.setItem('savedTimezones', JSON.stringify(timezones));
+    }
+
     function updateAllTimeZones(baseDate, sourceTimezone = null) {
         const items = document.querySelectorAll('.timezone-item');
         
@@ -91,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update time marker
             updateTimeMarker(item, localTime);
         });
+
+        // 每次更新后保存时区设置
+        saveTimezonesToLocalStorage();
     }
 
     function updateTimeMarker(item, time) {
@@ -209,6 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeZoneItem = e.target.closest('.timezone-item');
             if (timeZoneItem && timeZoneList.children.length > 1) {
                 timeZoneItem.remove();
+                // 删除地区后保存设置
+                saveTimezonesToLocalStorage();
             }
         }
     });
@@ -282,6 +297,88 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function addTimezone(timezone) {
+        const now = moment().tz(timezone);
+        const city = timezone.split('/').pop().replace(/_/g, ' ');
+        const region = timezone.split('/')[0];
+        
+        const newTimezoneItem = document.createElement('div');
+        newTimezoneItem.className = 'timezone-item';
+        newTimezoneItem.innerHTML = `
+            <div class="timezone-info">
+                <div class="timezone-header">
+                    <h2>${city === 'Shanghai' ? 'Beijing' : city}</h2>
+                    <button class="remove-button" title="Remove">×</button>
+                </div>
+                <div class="location-info">${region}</div>
+                <div class="timezone-controls">
+                    <input type="date" class="date-picker timezone-date" value="${now.format('YYYY-MM-DD')}">
+                    <select class="hour-selector timezone-hour">
+                        ${Array.from({length: 24}, (_, i) => {
+                            const hour = i;
+                            const period = hour >= 12 ? 'PM' : 'AM';
+                            const displayHour = hour % 12 || 12;
+                            return `<option value="${hour}" ${hour === now.hours() ? 'selected' : ''}>${displayHour} ${period}</option>`;
+                        }).join('')}
+                    </select>
+                </div>
+                <div class="time-info">
+                    <span class="current-time">${now.format('h:mm A')}</span>
+                    <span class="timezone-label">${now.format('z')}</span>
+                    <span class="date-label">${now.format('ddd, MMM D')}</span>
+                </div>
+            </div>
+            <div class="timeline-container">
+                <div class="timeline">
+                    <div class="time-marker">12am</div>
+                    <div class="time-marker">3am</div>
+                    <div class="time-marker">6am</div>
+                    <div class="time-marker">9am</div>
+                    <div class="time-marker">12pm</div>
+                    <div class="time-marker">3pm</div>
+                    <div class="time-marker">6pm</div>
+                    <div class="time-marker">9pm</div>
+                </div>
+                <div class="timeline-slider">
+                    <input type="range" min="0" max="1439" value="${now.hours() * 60 + now.minutes()}" class="time-slider">
+                    <div class="current-time-marker"></div>
+                </div>
+            </div>
+        `;
+
+        // 将新添加的时区放在列表最前面
+        timezoneList.prepend(newTimezoneItem);
+        updateAllTimeZones(now.toDate());
+        
+        // 添加时区后保存设置
+        saveTimezonesToLocalStorage();
+    }
+    
+    // 从本地存储加载时区设置
+    function loadTimezonesFromLocalStorage() {
+        // 先清空现有的时区列表
+        timezoneList.innerHTML = '';
+        
+        // 从localStorage获取保存的时区
+        const savedTimezones = localStorage.getItem('savedTimezones');
+        
+        if (savedTimezones) {
+            // 如果有保存的时区，则加载它们
+            const timezones = JSON.parse(savedTimezones);
+            timezones.forEach(timezone => {
+                addTimezone(timezone);
+            });
+        } else {
+            // 如果没有保存的时区，则加载默认时区
+            ['Asia/Shanghai', 'America/New_York', 'Europe/London'].forEach(timezone => {
+                addTimezone(timezone);
+            });
+        }
+    }
+    
+    // 初始化时加载时区设置
+    loadTimezonesFromLocalStorage();
+    
     // Improved search functionality
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
@@ -335,187 +432,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resultsContainer) {
             resultsContainer.remove();
         }
-    }
-
-    // Handle date changes
-    datePicker.addEventListener('change', () => {
-        const minutes = parseInt(timeSliders[0].value);
-        updateTimes(new Date(datePicker.valueAsDate.getFullYear(), datePicker.valueAsDate.getMonth(), datePicker.valueAsDate.getDate(), Math.floor(minutes / 60), minutes % 60));
-    });
-
-    // Initialize hour selector
-    hourSelector.addEventListener('change', () => {
-        const selectedHour = parseInt(hourSelector.value);
-        const minutes = selectedHour * 60;
-        const baseDate = new Date(datePicker.valueAsDate.getFullYear(),
-                                datePicker.valueAsDate.getMonth(),
-                                datePicker.valueAsDate.getDate(),
-                                selectedHour,
-                                0);
-        updateTimes(baseDate);
-    });
-
-    // Update hour selector when time changes
-    function updateHourSelector(date) {
-        const hour = date.getHours();
-        hourSelector.value = hour;
-    }
-
-    // Modify updateTimes to also update hour selector
-    function updateTimes(baseDate) {
-        const items = document.querySelectorAll('.timezone-item');
-        
-        items.forEach(item => {
-            const cityName = item.querySelector('h2').textContent;
-            const timeZone = allTimezones.find(tz => tz.city === cityName)?.timezone;
-            
-            if (timeZone) {
-                const localTime = moment(baseDate).tz(timeZone);
-                const totalMinutes = localTime.hours() * 60 + localTime.minutes();
-                
-                // Update time display
-                item.querySelector('.current-time').textContent = localTime.format('h:mm A');
-                item.querySelector('.timezone-label').textContent = localTime.format('z');
-                item.querySelector('.date-label').textContent = localTime.format('ddd, MMM D');
-                
-                // Update date and hour selectors
-                const dateSelector = item.querySelector('.timezone-date');
-                const hourSelector = item.querySelector('.timezone-hour');
-                if (dateSelector && hourSelector) {
-                    dateSelector.valueAsDate = localTime.toDate();
-                    hourSelector.value = localTime.hours();
-                }
-                
-                // Update slider position
-                const slider = item.querySelector('.time-slider');
-                slider.value = totalMinutes;
-                
-                // Update time marker
-                const marker = item.querySelector('.current-time-marker');
-                marker.textContent = localTime.format('h:mm A');
-                marker.style.left = `${(totalMinutes / 1439) * 100}%`;
-                marker.style.display = 'block';
-            }
-        });
-        
-        // Update timeline backgrounds
-        updateTimelineBackgrounds();
-    }
-
-    function getTimezoneFromIndex(index) {
-        const item = document.querySelectorAll('.timezone-item')[index];
-        if (!item) return 'UTC';
-        
-        // Use the timezone data attribute if available
-        if (item.dataset.timezone) {
-            return item.dataset.timezone;
-        }
-        
-        // Fallback to city name lookup
-        const city = item.querySelector('h2').textContent;
-        switch(city) {
-            case 'Beijing': return 'Asia/Shanghai';
-            case 'New York': return 'America/New_York';
-            case 'London': return 'Europe/London';
-            default: {
-                const timezone = allTimezones.find(tz => tz.city === city)?.timezone;
-                return timezone || 'UTC';
-            }
-        }
-    }
-
-    function updateTimelineBackgrounds() {
-        timeSliders.forEach(slider => {
-            const value = parseInt(slider.value);
-            const percent = (value / 1439) * 100;
-            
-            const gradient = `linear-gradient(to right, 
-                var(--night-color) 0%, var(--night-color) ${percent}%,
-                var(--day-color) ${percent}%, var(--day-color) 100%
-            )`;
-            
-            slider.style.background = gradient;
-        });
-    }
-    
-    function formatTimeFromMinutes(minutes) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        const period = hours >= 12 ? 'pm' : 'am';
-        const displayHours = hours % 12 || 12;
-        return `${displayHours}:${String(mins).padStart(2, '0')} ${period}`;
-    }
-    
-    function formatDate(date) {
-        // 使用上海时区格式化日期
-        return moment(date).tz('Asia/Shanghai').format('YYYY-MM-DD');
-    }
-    
-    function formatDateLabel(date) {
-        return date.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
-
-    // Initialize default timezones
-    function initializeDefaultTimezones() {
-        ['Asia/Shanghai', 'America/New_York', 'Europe/London'].forEach(timezone => {
-            addTimezone(timezone);
-        });
-    }
-
-    function addTimezone(timezone) {
-        const now = moment().tz(timezone);
-        const city = timezone.split('/').pop().replace(/_/g, ' ');
-        const region = timezone.split('/')[0];
-        
-        const newTimezoneItem = document.createElement('div');
-        newTimezoneItem.className = 'timezone-item';
-        newTimezoneItem.innerHTML = `
-            <div class="timezone-info">
-                <div class="timezone-header">
-                    <h2>${city === 'Shanghai' ? 'Beijing' : city}</h2>
-                    <button class="remove-button" title="Remove">×</button>
-                </div>
-                <div class="location-info">${region}</div>
-                <div class="timezone-controls">
-                    <input type="date" class="date-picker timezone-date" value="${now.format('YYYY-MM-DD')}">
-                    <select class="hour-selector timezone-hour">
-                        ${Array.from({length: 24}, (_, i) => {
-                            const hour = i;
-                            const period = hour >= 12 ? 'PM' : 'AM';
-                            const displayHour = hour % 12 || 12;
-                            return `<option value="${hour}" ${hour === now.hours() ? 'selected' : ''}>${displayHour} ${period}</option>`;
-                        }).join('')}
-                    </select>
-                </div>
-                <div class="time-info">
-                    <span class="current-time">${now.format('h:mm A')}</span>
-                    <span class="timezone-label">${now.format('z')}</span>
-                    <span class="date-label">${now.format('ddd, MMM D')}</span>
-                </div>
-            </div>
-            <div class="timeline-container">
-                <div class="timeline">
-                    <div class="time-marker">12am</div>
-                    <div class="time-marker">3am</div>
-                    <div class="time-marker">6am</div>
-                    <div class="time-marker">9am</div>
-                    <div class="time-marker">12pm</div>
-                    <div class="time-marker">3pm</div>
-                    <div class="time-marker">6pm</div>
-                    <div class="time-marker">9pm</div>
-                </div>
-                <div class="timeline-slider">
-                    <input type="range" min="0" max="1439" value="${now.hours() * 60 + now.minutes()}" class="time-slider">
-                    <div class="current-time-marker"></div>
-                </div>
-            </div>
-        `;
-
-        timezoneList.appendChild(newTimezoneItem);
-        updateAllTimeZones(now.toDate());
     }
 });

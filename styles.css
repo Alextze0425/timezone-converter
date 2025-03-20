@@ -154,23 +154,29 @@ body {
 
 .button-group {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
 }
 
 .icon-button {
-    padding: 10px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: var(--text-color);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    color: var(--text-color);
+    background-color: var(--bg-color);
 }
 
 .icon-button:hover {
-    background-color: var(--bg-color);
-    border-color: var(--primary-color);
+    background-color: var(--timeline-bg);
 }
 
 .current-time-button {
@@ -220,6 +226,7 @@ body {
     border-radius: 12px;
     background-color: var(--bg-color);
     transition: transform 0.3s, background-color 0.3s;
+    position: relative;
 }
 
 .timezone-item:hover {
@@ -241,6 +248,9 @@ body {
     cursor: pointer;
     padding: 4px 8px;
     transition: color 0.3s;
+    position: absolute;
+    top: 15px;
+    right: 15px;
 }
 
 .remove-button:hover {
@@ -448,6 +458,49 @@ h2 {
     .timezone-controls .hour-selector {
         width: 100%;
     }
+    
+    /* 优化箭头按钮触摸区域 */
+    .arrow-button {
+        width: 44px;
+        height: 44px;
+        font-size: 28px;
+        margin: 3px;
+    }
+    
+    /* 移动设备上箭头按钮位置调整 */
+    .arrow-buttons {
+        right: 10px;
+    }
+    
+    /* 移动设备上删除按钮调整 */
+    .remove-button {
+        top: 10px;
+        right: 10px;
+    }
+    
+    /* 输入框焦点状态优化 */
+    .search-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--accent-color);
+    }
+    
+    /* 搜索结果优化 */
+    .search-results {
+        max-height: 250px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .search-result {
+        padding: 15px;
+    }
+    
+    .result-city {
+        font-size: 16px;
+    }
+    
+    .result-info {
+        font-size: 13px;
+    }
 }
 
 [data-theme="dark"] .timezone-item {
@@ -500,4 +553,88 @@ h2 {
 [data-theme="dark"] .save-notification {
     background-color: var(--success-color);
     color: white;
+}
+
+/* 修改保存按钮样式，使其与其他图标按钮一致 */
+.save-button {
+    background-color: var(--success-color) !important;
+}
+
+.save-button:hover {
+    background-color: var(--primary-color) !important;
+}
+
+/* 保存按钮状态修改 */
+.save-button.saved {
+    background-color: var(--success-color) !important;
+    transform: scale(1.1);
+    animation: pulse-success 1s ease-in-out;
+}
+
+@keyframes pulse-success {
+    0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+/* 重新定位时区信息，为右侧箭头腾出空间 */
+.timezone-info {
+    padding-right: 60px; /* 在右侧留出箭头按钮的空间 */
+}
+
+/* 箭头按钮容器重新定位到右侧中间 */
+.arrow-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: absolute; /* 改为绝对定位 */
+    right: 15px; /* 距离右侧边缘的距离 */
+    top: 50%; /* 垂直居中 */
+    transform: translateY(-50%); /* 精确垂直居中 */
+}
+
+/* 箭头按钮样式 - 更圆润、更大、去掉黑色边框 */
+.arrow-button {
+    background-color: rgba(52, 152, 219, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 24px; /* 字体大小增大 */
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2px;
+    padding: 0;
+    color: var(--primary-color, #3498db);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.arrow-button:hover {
+    background-color: rgba(52, 152, 219, 0.2);
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.arrow-button:active {
+    transform: scale(0.95);
+    background-color: rgba(52, 152, 219, 0.3);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+        transform: scale(1);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
+        transform: scale(1.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+        transform: scale(1);
+    }
 } 

@@ -441,7 +441,7 @@ h2 {
     }
     
     .time-marker {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
     
     .hour-selector {
@@ -463,7 +463,7 @@ h2 {
     .arrow-button {
         width: 44px;
         height: 44px;
-        font-size: 28px;
+        font-size: 24px;
         margin: 3px;
     }
     
@@ -476,6 +476,7 @@ h2 {
     .remove-button {
         top: 10px;
         right: 10px;
+        font-size: 1.3rem;
     }
     
     /* 输入框焦点状态优化 */
@@ -495,79 +496,97 @@ h2 {
     }
     
     .result-city {
-        font-size: 16px;
+        font-size: 14px;
     }
     
     .result-info {
-        font-size: 13px;
+        font-size: 11px;
     }
     
     /* 移动端字体调小 */
     h2 {
-        font-size: 1.3rem; /* 从1.5rem减小 */
+        font-size: 1.1rem;
     }
     
     .current-time {
-        font-size: 1.6rem; /* 从1.8rem减小 */
+        font-size: 1.4rem;
     }
     
     .timezone-label,
     .date-label {
-        font-size: 0.85rem; /* 减小标签文本 */
+        font-size: 0.75rem;
     }
     
     .location-info {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
     }
     
     .search-input,
     .add-button {
-        font-size: 1rem; /* 搜索框和添加按钮文字减小 */
+        font-size: 0.9rem;
     }
     
     .icon-button {
-        font-size: 1rem; /* 图标按钮文字减小 */
+        font-size: 0.9rem;
     }
     
     .timezone-controls .date-picker,
     .timezone-controls .hour-selector {
-        font-size: 12px; /* 减小时间和日期选择器字体 */
+        font-size: 10px;
     }
     
     .time-slider::-webkit-slider-thumb {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
     }
     
     .current-time-marker {
-        font-size: 0.8rem;
-        padding: 3px 6px;
+        font-size: 0.7rem;
+        padding: 2px 5px;
     }
     
     .save-notification,
     .unsaved-notification {
-        font-size: 0.9rem; /* 通知文字减小 */
+        font-size: 0.8rem;
     }
     
     /* 通知内容字体调整 */
     .save-notification div,
     .unsaved-notification div {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
     
     .save-notification div div,
     .unsaved-notification div div {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
     
     .save-notification div div[style*="font-size: 12px"],
     .unsaved-notification div div[style*="font-size: 12px"] {
-        font-size: 0.75rem !important;
+        font-size: 0.65rem !important;
     }
     
     .save-notification div div[style*="font-size: 11px"],
     .unsaved-notification div div[style*="font-size: 11px"] {
-        font-size: 0.7rem !important;
+        font-size: 0.6rem !important;
+    }
+    
+    /* 调整内边距和间距以适应更小的字体 */
+    .timezone-item {
+        padding: 12px;
+    }
+    
+    .timezone-controls {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .time-info {
+        gap: 8px;
+    }
+    
+    .timeline-container {
+        padding: 15px 0;
     }
 }
 
@@ -647,7 +666,7 @@ h2 {
 
 /* 重新定位时区信息，为右侧箭头腾出空间 */
 .timezone-info {
-    padding-right: 60px; /* 在右侧留出箭头按钮的空间 */
+    padding-right: 60px;
 }
 
 /* 箭头按钮容器重新定位到右侧中间 */
@@ -655,10 +674,10 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    position: absolute; /* 改为绝对定位 */
-    right: 15px; /* 距离右侧边缘的距离 */
-    top: 50%; /* 垂直居中 */
-    transform: translateY(-50%); /* 精确垂直居中 */
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 /* 箭头按钮样式 - 更圆润、更大、去掉黑色边框 */
@@ -668,7 +687,7 @@ h2 {
     border-radius: 50%;
     width: 36px;
     height: 36px;
-    font-size: 24px; /* 字体大小增大 */
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     display: flex;

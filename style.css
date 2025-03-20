@@ -139,4 +139,69 @@
 
 .save-button:hover {
     transform: scale(1.05);
+}
+
+/* 移动设备触摸拖放样式 */
+.drag-placeholder {
+    border: 2px dashed var(--accent-color) !important;
+    background-color: rgba(var(--accent-rgb), 0.05) !important;
+    margin: 8px 0;
+    box-sizing: border-box;
+    transition: height 0.3s ease;
+}
+
+/* 触摸设备上拖动手柄的增强样式 */
+@media (max-width: 768px) {
+    .drag-handle {
+        padding: 8px 12px; /* 在触摸设备上增加点击区域 */
+        font-size: 20px; /* 更大的图标 */
+        opacity: 0.8;
+    }
+    
+    .timezone-item.dragging {
+        transform: scale(1.03);
+        opacity: 0.85;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+    
+    /* 添加视觉提示 */
+    .timezone-info::after {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        right: 60px;
+        color: var(--text-color-light);
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    /* 当用户第一次打开应用时显示提示 */
+    .timezone-item:first-child .timezone-info::after {
+        content: '长按拖动图标可排序';
+        opacity: 0.8;
+        animation: fadeOut 5s forwards 3s;
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 0.8; }
+        to { opacity: 0; }
+    }
+}
+
+/* 为移动设备优化的触摸反馈 */
+.timezone-item {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    touch-action: pan-y; /* 允许垂直滚动但禁用其他手势 */
+}
+
+.drag-handle {
+    touch-action: none; /* 在拖动手柄上禁用所有触摸操作（滚动、缩放等） */
+}
+
+/* 改进的悬停和激活状态 */
+.drag-handle:active {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    transform: scale(1.15);
 } 

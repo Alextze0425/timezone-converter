@@ -509,6 +509,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 timezoneItem.style.cursor = 'grabbing';
                 dragHandle.style.cursor = 'grabbing';
             });
+            
+            // 添加触摸事件支持，用于移动设备
+            dragHandle.addEventListener('touchstart', (e) => {
+                console.log('触摸拖动手柄开始');
+                e.preventDefault(); // 防止滚动
+                startTouchDrag(e, timezoneItem);
+            }, { passive: false });
         }
         
         // 为时区项添加拖拽事件
@@ -579,18 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 只在不同元素间处理放置
             if (draggedItem && this !== draggedItem) {
                 console.log('放置时区项');
-                // 获取当前时区项的位置信息
-                const targetRect = this.getBoundingClientRect();
-                const targetMiddleY = targetRect.top + targetRect.height / 2;
-                
-                // 根据放置位置（上半部分或下半部分）决定插入位置
-                if (e.clientY < targetMiddleY) {
-                    // 放在目标之前
-                    timezoneList.insertBefore(draggedItem, this);
-                } else {
-                    // 放在目标之后
-                    timezoneList.insertBefore(draggedItem, this.nextSibling);
-                }
+                moveItemToTarget(draggedItem, this, e.clientY);
             }
             
             this.classList.remove('drag-over');
@@ -609,6 +605,233 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 当前被拖动的元素
     let draggedItem = null;
+    
+    // 触摸拖动相关变量
+    let touchDragging = false;
+    let touchStartY = 0;
+    let currentTouchY = 0;
+    let draggedTouchItem = null;
+    let dragPlaceholder = null;
+    let lastTouchTarget = null;
+    
+    // 开始触摸拖动
+    function startTouchDrag(e, item) {
+        // 只处理单指触摸
+        if (e.touches.length !== 1) return;
+        
+        console.log('开始触摸拖动');
+        touchStartY = e.touches[0].clientY;
+        currentTouchY = touchStartY;
+        draggedTouchItem = item;
+        touchDragging = true;
+        
+        // 添加触摸移动和触摸结束事件
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+        document.addEventListener('touchcancel', handleTouchEnd);
+        
+        // 创建占位元素
+        createDragPlaceholder(item);
+        
+        // 添加拖动中的样式
+        draggedTouchItem.classList.add('dragging');
+        
+        // 显示拖动反馈
+        showTouchDragFeedback();
+        
+        // 更新样式和位置
+        updateDraggedItemPos(e.touches[0].clientY);
+        
+        // 添加拖动中的指示样式到所有时区项
+        const items = document.querySelectorAll('.timezone-item');
+        items.forEach(itemEl => {
+            if (itemEl !== draggedTouchItem) {
+                itemEl.classList.add('droppable');
+            }
+        });
+    }
+    
+    // 创建占位元素
+    function createDragPlaceholder(item) {
+        dragPlaceholder = document.createElement('div');
+        dragPlaceholder.className = 'timezone-item drag-placeholder';
+        dragPlaceholder.style.height = `${item.offsetHeight}px`;
+        dragPlaceholder.style.opacity = '0.3';
+        dragPlaceholder.style.border = '2px dashed var(--accent-color)';
+        dragPlaceholder.style.background = 'rgba(var(--accent-rgb), 0.1)';
+        dragPlaceholder.style.pointerEvents = 'none';
+        
+        // 插入占位符
+        item.parentNode.insertBefore(dragPlaceholder, item);
+        
+        // 设置拖动元素样式
+        item.style.position = 'fixed';
+        item.style.zIndex = '1000';
+        item.style.left = '0';
+        item.style.right = '0';
+        item.style.margin = '0 auto';
+        item.style.width = `${item.offsetWidth}px`;
+        item.style.opacity = '0.9';
+        item.style.transform = 'scale(1.02)';
+        item.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+    }
+    
+    // 显示触摸拖动反馈
+    function showTouchDragFeedback() {
+        // 创建提示元素
+        const feedback = document.createElement('div');
+        feedback.className = 'touch-drag-feedback';
+        feedback.style.position = 'fixed';
+        feedback.style.top = '50%';
+        feedback.style.left = '50%';
+        feedback.style.transform = 'translate(-50%, -50%)';
+        feedback.style.background = 'rgba(0, 0, 0, 0.7)';
+        feedback.style.color = 'white';
+        feedback.style.padding = '15px 20px';
+        feedback.style.borderRadius = '10px';
+        feedback.style.fontSize = '16px';
+        feedback.style.zIndex = '2000';
+        feedback.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        feedback.style.opacity = '0';
+        feedback.style.transition = 'opacity 0.3s ease';
+        feedback.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 20px; margin-right: 10px;">👆</span>
+                <span>上下拖动重新排序</span>
+            </div>
+        `;
+        document.body.appendChild(feedback);
+        
+        // 显示提示
+        setTimeout(() => {
+            feedback.style.opacity = '1';
+        }, 10);
+        
+        // 1.5秒后隐藏提示
+        setTimeout(() => {
+            feedback.style.opacity = '0';
+            setTimeout(() => {
+                if (feedback.parentNode) {
+                    feedback.parentNode.removeChild(feedback);
+                }
+            }, 300);
+        }, 1500);
+    }
+    
+    // 处理触摸移动
+    function handleTouchMove(e) {
+        if (!touchDragging || !draggedTouchItem) return;
+        
+        // 防止页面滚动
+        e.preventDefault();
+        
+        currentTouchY = e.touches[0].clientY;
+        updateDraggedItemPos(currentTouchY);
+        
+        // 找到当前触摸点下的元素
+        const touchTarget = document.elementFromPoint(
+            e.touches[0].clientX,
+            e.touches[0].clientY
+        );
+        
+        // 找到最近的时区项
+        const targetItem = touchTarget ? touchTarget.closest('.timezone-item') : null;
+        
+        // 如果触摸到了一个新的时区项，更新放置指示
+        if (targetItem && targetItem !== draggedTouchItem && targetItem !== dragPlaceholder) {
+            // 如果之前有突出显示的目标，移除样式
+            if (lastTouchTarget && lastTouchTarget !== targetItem) {
+                lastTouchTarget.classList.remove('drag-over');
+            }
+            
+            // 添加突出显示样式
+            targetItem.classList.add('drag-over');
+            lastTouchTarget = targetItem;
+            
+            // 确定是放在目标之前还是之后
+            const targetRect = targetItem.getBoundingClientRect();
+            const middleY = targetRect.top + targetRect.height / 2;
+            
+            if (currentTouchY < middleY && dragPlaceholder.nextElementSibling !== targetItem) {
+                // 放在目标之前
+                targetItem.parentNode.insertBefore(dragPlaceholder, targetItem);
+            } else if (currentTouchY >= middleY && targetItem.nextElementSibling !== dragPlaceholder) {
+                // 放在目标之后
+                targetItem.parentNode.insertBefore(dragPlaceholder, targetItem.nextElementSibling);
+            }
+        }
+    }
+    
+    // 更新被拖动元素的位置
+    function updateDraggedItemPos(y) {
+        if (draggedTouchItem) {
+            const offsetY = y - touchStartY;
+            draggedTouchItem.style.top = `${offsetY}px`;
+        }
+    }
+    
+    // 处理触摸结束
+    function handleTouchEnd(e) {
+        if (!touchDragging || !draggedTouchItem) return;
+        
+        console.log('触摸拖动结束');
+        
+        // 移除事件监听
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+        document.removeEventListener('touchcancel', handleTouchEnd);
+        
+        // 移除所有拖动样式
+        const items = document.querySelectorAll('.timezone-item');
+        items.forEach(item => {
+            item.classList.remove('droppable');
+            item.classList.remove('drag-over');
+        });
+        
+        // 恢复拖动元素的样式
+        draggedTouchItem.style.position = '';
+        draggedTouchItem.style.zIndex = '';
+        draggedTouchItem.style.top = '';
+        draggedTouchItem.style.left = '';
+        draggedTouchItem.style.right = '';
+        draggedTouchItem.style.margin = '';
+        draggedTouchItem.style.width = '';
+        draggedTouchItem.style.opacity = '';
+        draggedTouchItem.style.transform = '';
+        draggedTouchItem.style.boxShadow = '';
+        draggedTouchItem.classList.remove('dragging');
+        
+        // 把拖动元素移到占位符的位置
+        if (dragPlaceholder && dragPlaceholder.parentNode) {
+            dragPlaceholder.parentNode.insertBefore(draggedTouchItem, dragPlaceholder);
+            dragPlaceholder.parentNode.removeChild(dragPlaceholder);
+        }
+        
+        // 清理变量
+        dragPlaceholder = null;
+        draggedTouchItem = null;
+        lastTouchTarget = null;
+        touchDragging = false;
+        
+        // 显示未保存提示
+        showUnsavedChangesNotification();
+    }
+    
+    // 移动项目到目标位置的通用函数
+    function moveItemToTarget(draggedItem, targetItem, clientY) {
+        // 获取当前时区项的位置信息
+        const targetRect = targetItem.getBoundingClientRect();
+        const targetMiddleY = targetRect.top + targetRect.height / 2;
+        
+        // 根据放置位置（上半部分或下半部分）决定插入位置
+        if (clientY < targetMiddleY) {
+            // 放在目标之前
+            timezoneList.insertBefore(draggedItem, targetItem);
+        } else {
+            // 放在目标之后
+            timezoneList.insertBefore(draggedItem, targetItem.nextSibling);
+        }
+    }
     
     // 初始化已存在的时区项的拖放功能
     function initDragAndDrop() {
@@ -629,6 +852,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('未找到拖动手柄元素');
             }
         });
+        
+        // 设置触摸长按事件
+        setupTouchEvents();
         
         console.log('拖放功能初始化完成');
     }
@@ -837,5 +1063,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveButton.style.animation = '';
             }
         }, 5000);
+    }
+
+    // 为时区项添加触摸长按事件支持
+    function setupTouchEvents() {
+        console.log('设置触摸长按事件');
+        
+        // 获取所有拖动手柄
+        const dragHandles = document.querySelectorAll('.drag-handle');
+        let longPressTimer;
+        let startX, startY;
+        
+        dragHandles.forEach(handle => {
+            // 使用 touchstart 和 touchend 模拟长按
+            handle.addEventListener('touchstart', function(e) {
+                console.log('触摸开始在拖动手柄上');
+                if (e.touches.length !== 1) return;
+                
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                
+                // 设置长按定时器
+                longPressTimer = setTimeout(() => {
+                    console.log('检测到长按');
+                    // 触发拖动
+                    this.style.cursor = 'grabbing';
+                    const timezoneItem = this.closest('.timezone-item');
+                    if (timezoneItem) {
+                        // 添加触摸反馈
+                        navigator.vibrate && navigator.vibrate(50);
+                        startTouchDrag(e, timezoneItem);
+                    }
+                }, 300); // 长按 300ms 触发
+            }, { passive: false });
+            
+            // 触摸移动时，如果移动距离太大，取消长按
+            handle.addEventListener('touchmove', function(e) {
+                if (!longPressTimer) return;
+                
+                const moveX = Math.abs(e.touches[0].clientX - startX);
+                const moveY = Math.abs(e.touches[0].clientY - startY);
+                
+                // 如果移动超过5px，取消长按
+                if (moveX > 5 || moveY > 5) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
+            }, { passive: true });
+            
+            // 触摸结束时，清除定时器
+            handle.addEventListener('touchend', function() {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            });
+            
+            handle.addEventListener('touchcancel', function() {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            });
+        });
     }
 });

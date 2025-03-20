@@ -108,6 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'Beijing': return 'Asia/Shanghai';
             case 'New York': return 'America/New_York';
             case 'London': return 'Europe/London';
+            case 'Los Angeles': return 'America/Los_Angeles';
+            case 'Tokyo': return 'Asia/Tokyo';
+            case 'Paris': return 'Europe/Paris';
+            case 'Singapore': return 'Asia/Singapore';
+            case 'Sydney': return 'Australia/Sydney';
+            case 'Moscow': return 'Europe/Moscow';
+            case 'Dubai': return 'Asia/Dubai';
             default: return moment.tz.names().find(tz => tz.includes(cityName));
         }
     }
@@ -175,6 +182,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with current time
     updateAllTimeZones(new Date());
+    
+    // 每分钟自动更新所有时区的时间
+    setInterval(() => {
+        const now = new Date();
+        updateAllTimeZones(now);
+    }, 60000); // 60秒更新一次
     
     // Add timezone functionality
     addButton.addEventListener('click', () => {

@@ -877,4 +877,186 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 在窗口大小改变时重新调整按钮位置
     window.addEventListener('resize', moveHeaderButtons);
+
+    // ====== Leaflet 地图与时区联动 ======
+    const cityMarkers = [
+      { name: 'Beijing', timezone: 'Asia/Shanghai', lat: 39.9042, lng: 116.4074 },
+      { name: 'New York', timezone: 'America/New_York', lat: 40.7128, lng: -74.0060 },
+      { name: 'London', timezone: 'Europe/London', lat: 51.5074, lng: -0.1278 },
+      { name: 'Tokyo', timezone: 'Asia/Tokyo', lat: 35.6895, lng: 139.6917 },
+      { name: 'Paris', timezone: 'Europe/Paris', lat: 48.8566, lng: 2.3522 },
+      { name: 'Singapore', timezone: 'Asia/Singapore', lat: 1.3521, lng: 103.8198 },
+      { name: 'Sydney', timezone: 'Australia/Sydney', lat: -33.8688, lng: 151.2093 },
+      { name: 'Moscow', timezone: 'Europe/Moscow', lat: 55.7558, lng: 37.6173 },
+      { name: 'Dubai', timezone: 'Asia/Dubai', lat: 25.2048, lng: 55.2708 }
+    ];
+    let leafletMap, markerMap = {};
+    // ====== 邮编本地表（部分中美欧常用） ======
+    const postalCodeTable = [
+      // 中国
+      { code: '100000', city: 'Beijing', country: 'China', lat: 39.9042, lng: 116.4074 },
+      { code: '200000', city: 'Shanghai', country: 'China', lat: 31.2304, lng: 121.4737 },
+      // 美国
+      { code: '10001', city: 'New York', country: 'USA', lat: 40.7128, lng: -74.0060 },
+      { code: '90001', city: 'Los Angeles', country: 'USA', lat: 34.0522, lng: -118.2437 },
+      // 欧洲
+      { code: '10115', city: 'Berlin', country: 'Germany', lat: 52.5200, lng: 13.4050 },
+      { code: '75001', city: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+      { code: '00118', city: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
+      // 可继续扩展...
+    ];
+
+    // ====== 地图点击事件增强 ======
+    function getCountryCityFromTimezone(tz) {
+      // 简单映射，实际可扩展为更全表
+      const map = {
+        'Asia/Shanghai': { country: 'China', city: 'Beijing' },
+        'America/New_York': { country: 'USA', city: 'New York' },
+        'Europe/London': { country: 'UK', city: 'London' },
+        'Europe/Paris': { country: 'France', city: 'Paris' },
+        'Europe/Berlin': { country: 'Germany', city: 'Berlin' },
+        'Europe/Rome': { country: 'Italy', city: 'Rome' },
+        'America/Los_Angeles': { country: 'USA', city: 'Los Angeles' },
+        'Asia/Tokyo': { country: 'Japan', city: 'Tokyo' },
+        'Asia/Singapore': { country: 'Singapore', city: 'Singapore' },
+        'Australia/Sydney': { country: 'Australia', city: 'Sydney' },
+        'Europe/Moscow': { country: 'Russia', city: 'Moscow' },
+        'Asia/Dubai': { country: 'UAE', city: 'Dubai' },
+      };
+      return map[tz] || { country: '', city: '' };
+    }
+
+    // ====== 全球主要大城市英文名+国家全名+经纬度表，异步加载 ======
+    let allCities = [];
+    fetch('world-cities-major.json')
+      .then(res => res.json())
+      .then(data => { allCities = data; });
+    function haversine(lat1, lng1, lat2, lng2) {
+      const toRad = deg => deg * Math.PI / 180;
+      const R = 6371; // 地球半径，单位km
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+    function findNearestCity(lat, lng) {
+      let minDist = Infinity, nearest = null;
+      for (const city of allCities) {
+        const d = haversine(city.lat, city.lng, lat, lng);
+        if (d < minDist) {
+          minDist = d;
+          nearest = city;
+        }
+      }
+      return nearest;
+    }
+
+    // 国家代码转英文全名映射表
+    const countryCodes = {
+      US: 'United States',
+      CA: 'Canada',
+      AR: 'Argentina',
+      CN: 'China',
+      GB: 'United Kingdom',
+      FR: 'France',
+      DE: 'Germany',
+      IT: 'Italy',
+      RU: 'Russia',
+      JP: 'Japan',
+      AU: 'Australia',
+      SG: 'Singapore',
+      AE: 'United Arab Emirates',
+      BR: 'Brazil',
+      IN: 'India',
+      MX: 'Mexico',
+      ES: 'Spain',
+      // ...可继续扩展
+    };
+
+    function showTimezoneConfirmDialog(tz, lat, lng) {
+      // 获取UTC偏移和缩写
+      const now = moment();
+      const offset = now.tz(tz).format('Z');
+      let abbr = now.tz(tz).format('z');
+      if (!abbr || abbr.match(/^([+\-]?\d{2}:?\d{2}|GMT|UTC)$/i)) {
+        abbr = `UTC${offset}`;
+      }
+      const msg = `添加时区？\n时区：${tz} (${abbr})\nUTC偏移：UTC${offset}\n经纬度：${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+      return new Promise((resolve) => {
+        if (window.confirm(msg)) resolve(true); else resolve(false);
+      });
+    }
+
+    // 修改地图点击事件
+    function initWorldMap() {
+      leafletMap = L.map('world-map', {
+        center: [20, 0],
+        zoom: 2,
+        worldCopyJump: true,
+        zoomControl: true,
+        attributionControl: false
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 6,
+        minZoom: 2
+      }).addTo(leafletMap);
+      cityMarkers.forEach(city => {
+        const marker = L.marker([city.lat, city.lng]).addTo(leafletMap)
+          .bindTooltip(city.name, {permanent: false, direction: 'top'});
+        marker.on('click', () => {
+          addTimezone(city.timezone);
+          highlightMarker(city.timezone);
+          scrollToTimezone(city.name);
+        });
+        markerMap[city.timezone] = marker;
+      });
+      // 新增：地图任意点击
+      leafletMap.on('click', async function(e) {
+        const { lat, lng } = e.latlng;
+        let tz;
+        try {
+          tz = window.tzlookup(lat, lng);
+        } catch {
+          alert('无法识别该位置的时区');
+          return;
+        }
+        const ok = await showTimezoneConfirmDialog(tz, lat, lng);
+        if (ok) addTimezone(tz);
+      });
+    }
+    function highlightMarker(timezone) {
+      Object.entries(markerMap).forEach(([tz, marker]) => {
+        const icon = marker._icon;
+        if (icon) {
+          if (tz === timezone) icon.classList.add('selected');
+          else icon.classList.remove('selected');
+        }
+      });
+    }
+    function scrollToTimezone(cityName) {
+      // 滚动到对应的时区卡片
+      setTimeout(() => {
+        const items = document.querySelectorAll('.timezone-item h2');
+        for (const h2 of items) {
+          if (h2.textContent === cityName || (cityName === 'Beijing' && h2.textContent === 'Beijing')) {
+            h2.scrollIntoView({behavior: 'smooth', block: 'center'});
+            h2.parentElement.parentElement.parentElement.classList.add('highlighted');
+            setTimeout(() => h2.parentElement.parentElement.parentElement.classList.remove('highlighted'), 1500);
+            break;
+          }
+        }
+      }, 300);
+    }
+    // 在添加时区后高亮地图marker
+    const origAddTimezone = addTimezone;
+    addTimezone = function(timezone, isLoading = false) {
+      const item = origAddTimezone.apply(this, arguments);
+      highlightMarker(timezone);
+      return item;
+    };
+    // 页面加载后初始化地图
+    setTimeout(initWorldMap, 0);
 });

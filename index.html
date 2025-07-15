@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tz-lookup@latest/tz.js"></script>
 </head>
 <body>
     <div class="container">
@@ -28,7 +31,7 @@
                 </div>
             </div>
         </div>
-
+        <div id="world-map" style="height: 400px; margin-bottom: 24px; border-radius: 12px; overflow: hidden;"></div>
         <div class="timezone-list">
             <div class="timezone-item">
                 <div class="timezone-info">
